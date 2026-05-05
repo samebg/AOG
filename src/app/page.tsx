@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { EMOTIONS } from '@/lib/emotions'
 import { getLevelFromXP, getUnlockedColors, XP_REWARDS } from '@/lib/xp'
 import { useRouter } from 'next/navigation'
+import { CACHED_VERSES } from '@/lib/verse'
 
 interface Profile {
   total_xp: number
@@ -29,7 +30,7 @@ export default function HomePage() {
   const [highlightColor, setHighlightColor] = useState('#FBBF24')
   const [showHighlightPicker, setShowHighlightPicker] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'gospel' | 'journey'>('home')
+  const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'gospel' | 'journey' | 'devotional'>('home')
   const supabase = createClient()
   const router = useRouter()
 
@@ -55,6 +56,13 @@ export default function HomePage() {
   }, [supabase, router])
 
   const fetchVerse = useCallback(async (verseId: string) => {
+    // Check local cache first — zero API calls for the 8 emotion verses
+    if (CACHED_VERSES[verseId]) {
+      setVerse(CACHED_VERSES[verseId])
+      return
+    }
+
+    // Only hit API.bible for verses not in the cache
     setVerseLoading(true)
     setVerse(null)
     try {
@@ -204,7 +212,7 @@ export default function HomePage() {
 
       {/* Tabs */}
       <div className="flex border-b border-stone-800 px-5 mb-5">
-        {(['home', 'chat', 'gospel', 'journey'] as const).map(tab => (
+        {(['home', 'chat', 'gospel', 'journey', 'devotional'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -361,6 +369,27 @@ export default function HomePage() {
         </div>
       )}
 
+      {activeTab === 'devotional' && (
+        <div className="px-5 pb-24 flex flex-col items-center justify-center
+                  h-[calc(100vh-160px)]">
+          <div className="text-3xl mb-4">✦</div>
+          <p className="text-stone-300 text-sm font-medium mb-2">
+            Your Daily Devotional
+          </p>
+          <p className="text-stone-500 text-xs text-center mb-6 max-w-xs">
+            Claude reads your highlighted verses and writes a personal
+            reflection just for you — refreshed every day.
+          </p>
+          <button
+            onClick={() => router.push('/devotional')}
+            className="bg-violet-600 hover:bg-violet-500 text-white
+                 rounded-xl px-6 py-3 text-sm transition-colors"
+          >
+            Read today's devotional
+          </button>
+        </div>
+      )}
+
       {/* CHAT TAB */}
       {activeTab === 'chat' && (
         <div className="px-5 pb-24 flex flex-col h-[calc(100vh-160px)]">
@@ -471,7 +500,7 @@ export default function HomePage() {
             </div>
             <span className="text-stone-600 text-sm">→</span>
           </button>
-          
+
           {/* Level card — separate below */}
           <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 mb-4">
             <div className="text-center mb-4">

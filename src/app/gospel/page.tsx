@@ -108,7 +108,17 @@ export default function GospelPage() {
     loadLevel()
   }, [])
 
+  const chapterCache: Record<string, { id: string; reference: string; content: string }[]> = {}
+
+  // THEN replace loadChapter with this inside the component where it already lives:
   async function loadChapter(bookId: string, chapter: number) {
+    const key = `${bookId}.${chapter}`
+
+    if (chapterCache[key]) {
+      setVerses(chapterCache[key])
+      return
+    }
+
     setLoading(true)
     setError('')
     setVerses([])
@@ -121,6 +131,7 @@ export default function GospelPage() {
         setError('Could not load chapter. Please try again.')
         return
       }
+      chapterCache[key] = data.verses || []
       setVerses(data.verses || [])
     } catch {
       setError('Could not load chapter. Please try again.')
@@ -289,8 +300,8 @@ export default function GospelPage() {
           {verses.length > 0 && selectedBook && selectedChapter
             ? `${selectedBook.name} ${selectedChapter}`
             : selectedBook
-            ? selectedBook.name
-            : 'Bible'}
+              ? selectedBook.name
+              : 'Bible'}
         </h1>
         {verses.length > 0 && selectedBook && selectedChapter && (
           <span className="text-stone-600 text-xs">
