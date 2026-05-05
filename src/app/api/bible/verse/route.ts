@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const BIBLE_API_BASE = 'https://api.scripture.api.bible/v1'
-
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const verseId = searchParams.get('verseId')
@@ -12,11 +10,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const response = await fetch(
-      `${BIBLE_API_BASE}/bibles/${process.env.BIBLE_ID}/verses/${verseId}?content-type=text&include-verse-numbers=false`,
+      `https://rest.api.bible/v1/bibles/${process.env.BIBLE_ID}/verses/${verseId}?content-type=text&include-verse-numbers=false`,
       {
-        headers: {
-          'api-key': process.env.BIBLE_API_KEY!,
-        },
+        headers: { 'api-key': process.env.BIBLE_API_KEY! },
       }
     )
 
@@ -27,6 +23,7 @@ export async function GET(request: NextRequest) {
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error) {
+    console.error('Bible API error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch verse' },
       { status: 500 }

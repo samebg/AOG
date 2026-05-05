@@ -29,7 +29,7 @@ export default function HomePage() {
   const [highlightColor, setHighlightColor] = useState('#FBBF24')
   const [showHighlightPicker, setShowHighlightPicker] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'journey'>('home')
+  const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'gospel' | 'journey'>('home')
   const supabase = createClient()
   const router = useRouter()
 
@@ -204,7 +204,7 @@ export default function HomePage() {
 
       {/* Tabs */}
       <div className="flex border-b border-stone-800 px-5 mb-5">
-        {(['home', 'chat', 'journey'] as const).map(tab => (
+        {(['home', 'chat', 'gospel', 'journey'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -341,6 +341,25 @@ export default function HomePage() {
           </div>
         </div>
       )}
+      
+      {/* GOSPEL TAB */}
+      {activeTab === 'gospel' && (
+        <div className="px-5 pb-24 flex flex-col items-center justify-center 
+                        h-[calc(100vh-160px)]">
+          <div className="text-3xl mb-4">📖</div>
+          <p className="text-stone-300 text-sm font-medium mb-2">Read the Word</p>
+          <p className="text-stone-500 text-xs text-center mb-6">
+            Browse books and chapters of the Bible
+          </p>
+          <button
+            onClick={() => router.push('/gospel')}
+            className="bg-violet-600 hover:bg-violet-500 text-white 
+                       rounded-xl px-6 py-3 text-sm transition-colors"
+          >
+            Open Bible reader
+          </button>
+        </div>
+      )}
 
       {/* CHAT TAB */}
       {activeTab === 'chat' && (
@@ -381,7 +400,11 @@ export default function HomePage() {
                       ? 'bg-violet-600 text-white rounded-br-sm'
                       : 'bg-stone-900 border border-stone-800 text-stone-200 rounded-bl-sm'}`}
                 >
-                  {m.content}
+                  {m.content.split(/(\b\d?\s?[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s\d+:\d+(?:-\d+)?\b)/g).map((part, i) => 
+                    /\d+:\d+/.test(part)
+                      ? <strong key={i} className="text-violet-300 font-medium">{part}</strong>
+                      : part
+                  )}
                 </div>
               </div>
             ))}

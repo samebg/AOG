@@ -36,20 +36,28 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
-      system: SYSTEM_PROMPT,
-      messages: messages.map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content
-      }))
-    })
+  model: 'claude-sonnet-4-20250514',
+  max_tokens: 300,
+  system: SYSTEM_PROMPT,
+  messages: messages.map((m: { role: string; content: string }) => ({
+    role: m.role,
+    content: m.content
+  }))
+})
 
-    const text = response.content[0].type === 'text' 
-      ? response.content[0].text : ''
+const raw = response.content[0].type === 'text'
+  ? response.content[0].text
+  : ''
 
-    return NextResponse.json({ response: text, crisis: false })
-  } catch {
-    return NextResponse.json({ error: 'Failed to get response' }, { status: 500 })
-  }
+const text = raw
+  .replace(/\*\*(.*?)\*\*/g, '$1')
+  .replace(/\*(.*?)\*/g, '$1')
+  .replace(/#{1,6}\s/g, '')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim()
+
+return NextResponse.json({ response: text, crisis: false })
+} catch {
+  return NextResponse.json({ error: 'Failed to get response' }, { status: 500 })
+}
 }
