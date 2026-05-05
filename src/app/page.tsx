@@ -356,7 +356,7 @@ export default function HomePage() {
             className="bg-violet-600 hover:bg-violet-500 text-white 
                        rounded-xl px-6 py-3 text-sm transition-colors"
           >
-            Open Bible reader
+            Open Bible Reader
           </button>
         </div>
       )}
