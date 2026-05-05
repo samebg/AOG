@@ -66,8 +66,8 @@ export default function HomePage() {
           reference: data.data.reference
         })
       }
-    } catch { 
-      setVerse({ text: 'Could not load verse.', reference: '' }) 
+    } catch {
+      setVerse({ text: 'Could not load verse.', reference: '' })
     }
     setVerseLoading(false)
   }, [])
@@ -80,9 +80,9 @@ export default function HomePage() {
     await fetch('/api/xp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        amount: XP_REWARDS.EMOTION_CHECKIN, 
-        reason: 'emotion_checkin' 
+      body: JSON.stringify({
+        amount: XP_REWARDS.EMOTION_CHECKIN,
+        reason: 'emotion_checkin'
       })
     })
   }
@@ -102,20 +102,20 @@ export default function HomePage() {
       body: JSON.stringify({ messages: newMessages })
     })
     const data = await res.json()
-    
+
     if (data.crisis) setCrisis(true)
-    setMessages([...newMessages, { 
-      role: 'assistant', 
-      content: data.response || data.error 
+    setMessages([...newMessages, {
+      role: 'assistant',
+      content: data.response || data.error
     }])
-    
+
     if (!data.crisis && newMessages.length === 1) {
       await fetch('/api/xp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          amount: XP_REWARDS.CHAT_SESSION, 
-          reason: 'chat_session' 
+        body: JSON.stringify({
+          amount: XP_REWARDS.CHAT_SESSION,
+          reason: 'chat_session'
         })
       })
     }
@@ -138,9 +138,9 @@ export default function HomePage() {
     await fetch('/api/xp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        amount: XP_REWARDS.HIGHLIGHT_VERSE, 
-        reason: 'highlight_verse' 
+      body: JSON.stringify({
+        amount: XP_REWARDS.HIGHLIGHT_VERSE,
+        reason: 'highlight_verse'
       })
     })
 
@@ -155,18 +155,18 @@ export default function HomePage() {
   }
 
   const levelInfo = profile ? getLevelFromXP(profile.total_xp) : null
-  const unlockedColors = profile 
+  const unlockedColors = profile
     ? getUnlockedColors(profile.current_level) : []
 
   return (
     <div className="min-h-screen bg-stone-950 text-white max-w-lg mx-auto">
-      
+
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-12 pb-4">
         <div>
           <h1 className="text-base font-medium">
-            {profile?.display_name 
-              ? `Welcome, ${profile.display_name}` 
+            {profile?.display_name
+              ? `Welcome, ${profile.display_name}`
               : 'Armor of God'}
           </h1>
           {profile && (
@@ -209,8 +209,8 @@ export default function HomePage() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`pb-2 mr-6 text-sm capitalize transition-colors border-b-2 -mb-px
-              ${activeTab === tab 
-                ? 'text-white border-violet-500' 
+              ${activeTab === tab
+                ? 'text-white border-violet-500'
                 : 'text-stone-500 border-transparent hover:text-stone-300'}`}
           >
             {tab}
@@ -227,7 +227,7 @@ export default function HomePage() {
                           p-6 mb-6 text-center">
             <div className="text-3xl mb-2">🛡️</div>
             <p className="text-xs text-stone-400 italic mb-1">
-              "Put on the full armor of God, so that you can take your 
+              "Put on the full armor of God, so that you can take your
               stand against the devil's schemes."
             </p>
             <p className="text-xs text-stone-600">Ephesians 6:11</p>
@@ -262,8 +262,8 @@ export default function HomePage() {
               <span className="text-xs text-stone-500">
                 For when you feel {selectedEmotion.label.toLowerCase()}
               </span>
-              <span 
-                className="w-2.5 h-2.5 rounded-full" 
+              <span
+                className="w-2.5 h-2.5 rounded-full"
                 style={{ background: selectedEmotion.color }}
               />
             </div>
@@ -313,8 +313,8 @@ export default function HomePage() {
                           key={c.hex}
                           onClick={() => setHighlightColor(c.hex)}
                           className={`w-7 h-7 rounded-full border-2 transition-all
-                            ${highlightColor === c.hex 
-                              ? 'border-white scale-110' 
+                            ${highlightColor === c.hex
+                              ? 'border-white scale-110'
                               : 'border-transparent'}`}
                           style={{ background: c.hex }}
                           title={c.name}
@@ -341,7 +341,7 @@ export default function HomePage() {
           </div>
         </div>
       )}
-      
+
       {/* GOSPEL TAB */}
       {activeTab === 'gospel' && (
         <div className="px-5 pb-24 flex flex-col items-center justify-center 
@@ -383,7 +383,7 @@ export default function HomePage() {
                   You are not alone
                 </p>
                 <p className="text-red-200 text-sm">
-                  Please reach out to the 988 Suicide & Crisis Lifeline — 
+                  Please reach out to the 988 Suicide & Crisis Lifeline —
                   call or text <strong>988</strong>
                 </p>
               </div>
@@ -400,7 +400,7 @@ export default function HomePage() {
                       ? 'bg-violet-600 text-white rounded-br-sm'
                       : 'bg-stone-900 border border-stone-800 text-stone-200 rounded-bl-sm'}`}
                 >
-                  {m.content.split(/(\b\d?\s?[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s\d+:\d+(?:-\d+)?\b)/g).map((part, i) => 
+                  {m.content.split(/(\b\d?\s?[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s\d+:\d+(?:-\d+)?\b)/g).map((part, i) =>
                     /\d+:\d+/.test(part)
                       ? <strong key={i} className="text-violet-300 font-medium">{part}</strong>
                       : part
@@ -455,11 +455,29 @@ export default function HomePage() {
       {/* JOURNEY TAB */}
       {activeTab === 'journey' && levelInfo && (
         <div className="px-5 pb-24">
+          {/* Highlights button — outside the level card */}
+          <button
+            onClick={() => router.push('/highlights')}
+            className="w-full flex items-center justify-between bg-stone-900 
+                 border border-stone-800 rounded-2xl px-5 py-4 mb-4
+                 hover:border-violet-500 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-lg">📖</span>
+              <div className="text-left">
+                <p className="text-sm font-medium text-stone-200">My highlights</p>
+                <p className="text-xs text-stone-500">View your saved verses</p>
+              </div>
+            </div>
+            <span className="text-stone-600 text-sm">→</span>
+          </button>
+          
+          {/* Level card — separate below */}
           <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 mb-4">
             <div className="text-center mb-4">
               <div className="w-16 h-16 bg-violet-950 border-2 border-violet-600 
-                              rounded-full flex items-center justify-center 
-                              mx-auto mb-3">
+                        rounded-full flex items-center justify-center 
+                        mx-auto mb-3">
                 <span className="text-2xl font-medium text-violet-300">
                   {levelInfo.current.level}
                 </span>
