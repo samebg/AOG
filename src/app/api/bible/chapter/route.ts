@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       .replace(/\s+/g, ' ')
       .trim()
 
-    const versePattern = /\[(\d+)\]\s*(.*?)(?=\[\d+\]|$)/gs
+    const versePattern = /\[(\d+)\]\s*([\s\S]*?)(?=\[\d+\]|$)/g
     const verses = []
     let match
 
