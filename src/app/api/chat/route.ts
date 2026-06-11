@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { detectCrisis } from '@/lib/xp'
+import { createServiceClient } from '@/lib/supabase/service'
+import {
+  retrieveVerses,
+  buildGroundedSystem,
+  checkGrounding,
+  type RetrievedVerse,
+} from '@/lib/rag'
 
-const client = new Anthropic()
+const anthropic = new Anthropic()
+const openai = new OpenAI()
 
 const CRISIS_RESPONSE = `I hear that you're going through something really heavy right now. You don't have to carry this alone.
 
@@ -12,52 +21,74 @@ Please reach out to someone who can help:
 
 You matter. God has not forgotten you.`
 
-const SYSTEM_PROMPT = `You are a compassionate Christian encouragement companion called Armor of God. 
-
-Your role is to provide spiritual encouragement grounded exclusively in scripture.
-
-Rules you must never break:
-- ONLY quote Bible verses that actually exist. Never invent or paraphrase a verse and present it as a direct quote.
-- Always cite the book, chapter, and verse (e.g. John 3:16)
-- Keep responses warm, concise, and pastoral — under 150 words
-- Never give medical, legal, or psychological advice
-- Never claim to replace prayer, church, or human connection
-- If someone seems to be in crisis, gently encourage them to seek human help
-
-You are a companion for spiritual encouragement, not a therapist or pastor.`
-
 export async function POST(request: NextRequest) {
   try {
     const { messages } = await request.json()
     const lastMessage = messages[messages.length - 1]?.content || ''
 
+    // 1. Safety first — a crisis never reaches the model.
     if (detectCrisis(lastMessage)) {
-      return NextResponse.json({ response: CRISIS_RESPONSE, crisis: true })
+      return NextResponse.json({
+        response: CRISIS_RESPONSE,
+        crisis: true,
+        grounded: false,
+        matched_verses: [],
+      })
     }
 
-    const response = await client.messages.create({
-  model: 'claude-sonnet-4-6',
-  max_tokens: 300,
-  system: SYSTEM_PROMPT,
-  messages: messages.map((m: { role: string; content: string }) => ({
-    role: m.role,
-    content: m.content
-  }))
-})
+    // One service client, shared by retrieval and the grounding check.
+    const supabase = createServiceClient()
 
-const raw = response.content[0].type === 'text'
-  ? response.content[0].text
-  : ''
+    // 2. Retrieve real verses related to what the user said.
+    //    If retrieval fails, we fall back to no context rather than break the chat.
+    let retrieved: RetrievedVerse[] = []
+    try {
+      retrieved = await retrieveVerses(supabase, openai, lastMessage)
+    } catch (err) {
+      console.error('Verse retrieval failed:', err)
+    }
 
-const text = raw
-  .replace(/\*\*(.*?)\*\*/g, '$1')
-  .replace(/\*(.*?)\*/g, '$1')
-  .replace(/#{1,6}\s/g, '')
-  .replace(/\n{3,}/g, '\n\n')
-  .trim()
+    console.log(
+      'Retrieved verses:',
+      retrieved.map(v => `${v.reference} (${v.similarity.toFixed(3)})`)
+    )
 
-return NextResponse.json({ response: text, crisis: false })
-} catch {
-  return NextResponse.json({ error: 'Failed to get response' }, { status: 500 })
-}
+    // 3. Call Claude with the grounded system prompt (base instructions + verses).
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      system: buildGroundedSystem(retrieved),
+      messages: messages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    })
+
+    const raw = response.content[0].type === 'text' ? response.content[0].text : ''
+
+    // 4. Strip markdown for clean display.
+    const text = raw
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+
+    // 5. Grounding check — did the reply cite verses that exist in our DB?
+    //    Wrapped so a failure here never breaks the chat response.
+    let grounded = false
+    let matched_verses: string[] = []
+    try {
+      const result = await checkGrounding(supabase, text)
+      grounded = result.grounded
+      matched_verses = result.matched
+      console.log('Grounding check:', result)
+    } catch (err) {
+      console.error('Grounding check failed:', err)
+    }
+
+    return NextResponse.json({ response: text, crisis: false, grounded, matched_verses })
+  } catch {
+    return NextResponse.json({ error: 'Failed to get response' }, { status: 500 })
+  }
 }

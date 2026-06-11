@@ -1,10 +1,11 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { EMOTIONS } from '@/lib/emotions'
 import { getLevelFromXP, getUnlockedColors, XP_REWARDS } from '@/lib/xp'
 import { useRouter } from 'next/navigation'
 import { CACHED_VERSES } from '@/lib/verse'
+import { parseReference } from '@/lib/books'
 
 interface Profile {
   total_xp: number
@@ -16,12 +17,14 @@ interface Profile {
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  grounded?: boolean
+  matchedVerses?: string[]
 }
 
 export default function HomePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [selectedEmotion, setSelectedEmotion] = useState(EMOTIONS[0])
-  const [verse, setVerse] = useState<{ text: string; reference: string } | null>(null)
+  const [verse, setVerse] = useState<{ text: string; reference: string; verseId: string; category: string } | null>(null)
   const [verseLoading, setVerseLoading] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -33,6 +36,8 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'gospel' | 'journey' | 'devotional'>('home')
   const supabase = createClient()
   const router = useRouter()
+  // Remembers the last verse shown so we don't repeat it on the next pick.
+  const lastVerseRef = useRef<string | null>(null)
 
   const loadProfile = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -55,43 +60,64 @@ export default function HomePage() {
     if (updated) setProfile(updated)
   }, [supabase, router])
 
-  const fetchVerse = useCallback(async (verseId: string) => {
-    // Check local cache first — zero API calls for the 8 emotion verses
-    if (CACHED_VERSES[verseId]) {
-      setVerse(CACHED_VERSES[verseId])
+  // Loads a verse for the selected emotion straight from the verses table,
+  // choosing one whose category matches how the user feels. Picks a fresh one
+  // each time (avoiding an immediate repeat) so the same mood shows variety.
+  const loadPersonalVerse = useCallback(async (emotion: typeof EMOTIONS[0]) => {
+    setVerseLoading(true)
+
+    // Pull every verse that belongs to one of this emotion's categories.
+    const { data } = await supabase
+      .from('verses')
+      .select('passage_id, reference, text, category')
+      .in('category', emotion.categories)
+      .not('text', 'is', null)
+
+    if (!data || data.length === 0) {
+      // Fallback to the local cached verse if the DB has nothing for this mood.
+      const cached = CACHED_VERSES[emotion.verseId]
+      setVerse(
+        cached
+          ? { ...cached, verseId: emotion.verseId, category: emotion.categories[0] }
+          : null
+      )
+      setVerseLoading(false)
       return
     }
 
-    // Only hit API.bible for verses not in the cache
-    setVerseLoading(true)
-    setVerse(null)
-    try {
-      const res = await fetch(`/api/bible/verse?verseId=${verseId}`)
-      const data = await res.json()
-      if (data.data) {
-        setVerse({
-          text: data.data.content.replace(/<[^>]*>/g, '').trim(),
-          reference: data.data.reference
-        })
-      }
-    } catch {
-      setVerse({ text: 'Could not load verse.', reference: '' })
-    }
+    // Avoid showing the same verse twice in a row when there's more than one.
+    const pool =
+      data.length > 1
+        ? data.filter(v => v.reference !== lastVerseRef.current)
+        : data
+    const chosen = pool[Math.floor(Math.random() * pool.length)]
+    lastVerseRef.current = chosen.reference
+
+    setVerse({
+      text: chosen.text,
+      reference: chosen.reference,
+      verseId: chosen.passage_id,
+      category: chosen.category,
+    })
     setVerseLoading(false)
-  }, [])
+  }, [supabase])
 
   useEffect(() => { loadProfile() }, [loadProfile])
-  useEffect(() => { fetchVerse(selectedEmotion.verseId) }, [selectedEmotion, fetchVerse])
+  // Load a personalized verse for the default mood on first render.
+  // Later changes are driven by handleEmotionSelect so re-tapping rotates.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadPersonalVerse(selectedEmotion) }, [])
 
   async function handleEmotionSelect(emotion: typeof EMOTIONS[0]) {
     setSelectedEmotion(emotion)
-    await fetch('/api/xp', {
+    loadPersonalVerse(emotion)
+    // /api/mood saves today's mood and awards XP only once per day.
+    // If the user already checked in today it returns alreadyCheckedIn: true
+    // and skips the XP award — this prevents the old XP farming bug.
+    await fetch('/api/mood', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount: XP_REWARDS.EMOTION_CHECKIN,
-        reason: 'emotion_checkin'
-      })
+      body: JSON.stringify({ emotion: emotion.id }),
     })
   }
 
@@ -114,7 +140,9 @@ export default function HomePage() {
     if (data.crisis) setCrisis(true)
     setMessages([...newMessages, {
       role: 'assistant',
-      content: data.response || data.error
+      content: data.response || data.error,
+      grounded: data.grounded,
+      matchedVerses: data.matched_verses,
     }])
 
     if (!data.crisis && newMessages.length === 1) {
@@ -137,7 +165,7 @@ export default function HomePage() {
 
     await supabase.from('highlights').insert({
       user_id: user.id,
-      verse_id: selectedEmotion.verseId,
+      verse_id: verse.verseId,
       verse_reference: verse.reference,
       verse_text: verse.text,
       color: highlightColor,
@@ -289,7 +317,9 @@ export default function HomePage() {
                 <p className="text-stone-200 text-sm leading-relaxed italic mb-1">
                   "{verse.text}"
                 </p>
-                <p className="text-stone-500 text-xs mb-4">{verse.reference}</p>
+                <p className="text-stone-500 text-xs mb-4">
+                  {verse.reference} <span className="text-stone-600">· {verse.category}</span>
+                </p>
 
                 <div className="flex gap-2">
                   <button
@@ -423,17 +453,47 @@ export default function HomePage() {
                 key={i}
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
+                <div className="flex flex-col gap-1 max-w-xs">
                 <div
-                  className={`max-w-xs rounded-2xl px-4 py-3 text-sm leading-relaxed
+                  className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap
                     ${m.role === 'user'
                       ? 'bg-violet-600 text-white rounded-br-sm'
                       : 'bg-stone-900 border border-stone-800 text-stone-200 rounded-bl-sm'}`}
                 >
-                  {m.content.split(/(\b\d?\s?[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s\d+:\d+(?:-\d+)?\b)/g).map((part, i) =>
-                    /\d+:\d+/.test(part)
-                      ? <strong key={i} className="text-violet-300 font-medium">{part}</strong>
-                      : part
-                  )}
+                  {m.content.split(/(\b\d?\s?[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s\d+:\d+(?:-\d+)?\b)/g).map((part, i) => {
+                    // Only the chunks that look like a reference (have "chapter:verse")
+                    // get special treatment.
+                    if (!/\d+:\d+/.test(part)) return part
+
+                    // If we can resolve it to a real book, make it a tappable link
+                    // that opens the Gospel reader at that exact verse.
+                    const loc = parseReference(part)
+                    if (loc) {
+                      return (
+                        <button
+                          key={i}
+                          onClick={() =>
+                            router.push(`/gospel?book=${loc.bookId}&chapter=${loc.chapter}&verse=${loc.verse}`)
+                          }
+                          className="inline text-violet-300 font-medium underline decoration-dotted underline-offset-2 hover:text-violet-200"
+                        >
+                          {part}
+                        </button>
+                      )
+                    }
+
+                    // Recognizable as a reference but not a book we know — just bold it.
+                    return <strong key={i} className="text-violet-300 font-medium">{part}</strong>
+                  })}
+                </div>
+                {m.role === 'assistant' && m.grounded && m.matchedVerses && m.matchedVerses.length > 0 && (
+                  <div className="flex items-center gap-1.5 px-1">
+                    <span className="text-emerald-400 text-xs">✓</span>
+                    <span className="text-stone-500 text-xs">
+                      Grounded in {m.matchedVerses.length} verified verse{m.matchedVerses.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                )}
                 </div>
               </div>
             ))}

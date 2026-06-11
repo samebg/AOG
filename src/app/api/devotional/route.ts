@@ -11,6 +11,7 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 const anthropic = new Anthropic()
 
@@ -121,7 +122,7 @@ Based on these highlights, write a personalized daily devotional. Return ONLY va
             })
         }
 
-        // Step 7
+        // Step 7: Save to DB and award XP
         const { data: saved, error: insertError } = await supabase
             .from('devotionals')
             .insert({
@@ -136,42 +137,24 @@ Based on these highlights, write a personalized daily devotional. Return ONLY va
             .select()
             .single()
 
-        // NOW you can see exactly what's going wrong
-        console.log('Insert error:', insertError)
-        console.log('Saved:', saved)
-        console.log('Claude returned:', raw)
-
         if (insertError) {
-            // Table doesn't exist, RLS blocking it, or unique constraint hit
             // Still return the devotional so the user sees something
             return NextResponse.json({
                 devotional: { ...parsed, highlight_count: highlights.length },
-                xpAwarded: 20
+                xpAwarded: 20,
             })
         }
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('total_xp')
-            .eq('id', user.id)
-            .single()
-
-        const newXP = (profile?.total_xp || 0) + 20
-
-        await supabase
-            .from('profiles')
-            .update({ total_xp: newXP })
-            .eq('id', user.id)
-
-        await supabase.from('xp_log').insert({
-            user_id: user.id,
-            amount: 20,
-            reason: 'devotional_read'
+        // Award XP via the centralized function — this also updates current_level.
+        // award_xp is locked to the service role, so we call it with the service client.
+        const service = createServiceClient()
+        await service.rpc('award_xp', {
+            p_user_id: user.id,
+            p_amount: 20,
+            p_reason: 'devotional_read',
         })
 
         return NextResponse.json({ devotional: saved, xpAwarded: 20 })
-
-        console.log('Claude returned:', raw)
 
     } catch (error) {
         console.error('Devotional generation error:', error)
