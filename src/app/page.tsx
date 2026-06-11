@@ -195,7 +195,7 @@ export default function HomePage() {
     ? getUnlockedColors(profile.current_level) : []
 
   return (
-    <div className="min-h-screen bg-stone-950 text-white max-w-lg mx-auto">
+    <div className="min-h-screen text-white max-w-lg mx-auto">
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-12 pb-4">
