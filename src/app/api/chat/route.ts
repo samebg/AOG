@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
         crisis: true,
         grounded: false,
         matched_verses: [],
+        retrieved: [],
       })
     }
 
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       console.error('Grounding check failed:', err)
     }
 
-    return NextResponse.json({ response: text, crisis: false, grounded, matched_verses })
+    return NextResponse.json({ response: text, crisis: false, grounded, matched_verses, retrieved })
   } catch {
     return NextResponse.json({ error: 'Failed to get response' }, { status: 500 })
   }

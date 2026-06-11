@@ -6,6 +6,8 @@ import { getLevelFromXP, getUnlockedColors, XP_REWARDS } from '@/lib/xp'
 import { useRouter } from 'next/navigation'
 import { CACHED_VERSES } from '@/lib/verse'
 import { parseReference } from '@/lib/books'
+import RetrievedContext from '@/components/RetrievedContext'
+import type { RetrievedVerse } from '@/lib/rag'
 
 interface Profile {
   total_xp: number
@@ -19,6 +21,7 @@ interface Message {
   content: string
   grounded?: boolean
   matchedVerses?: string[]
+  retrieved?: RetrievedVerse[]
 }
 
 export default function HomePage() {
@@ -143,6 +146,7 @@ export default function HomePage() {
       content: data.response || data.error,
       grounded: data.grounded,
       matchedVerses: data.matched_verses,
+      retrieved: data.retrieved,
     }])
 
     if (!data.crisis && newMessages.length === 1) {
@@ -493,6 +497,9 @@ export default function HomePage() {
                       Grounded in {m.matchedVerses.length} verified verse{m.matchedVerses.length === 1 ? '' : 's'}
                     </span>
                   </div>
+                )}
+                {m.role === 'assistant' && m.retrieved && (
+                  <RetrievedContext retrieved={m.retrieved} />
                 )}
                 </div>
               </div>
