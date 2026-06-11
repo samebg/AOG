@@ -568,6 +568,23 @@ export default function HomePage() {
             <span className="text-stone-600 text-sm">→</span>
           </button>
 
+          {/* RAG evaluation dashboard — same style as the highlights button */}
+          <button
+            onClick={() => router.push('/eval')}
+            className="w-full flex items-center justify-between bg-stone-900
+                 border border-stone-800 rounded-2xl px-5 py-4 mb-4
+                 hover:border-violet-500 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-lg">📊</span>
+              <div className="text-left">
+                <p className="text-sm font-medium text-stone-200">RAG evaluation</p>
+                <p className="text-xs text-stone-500">Measure retrieval & grounding quality</p>
+              </div>
+            </div>
+            <span className="text-stone-600 text-sm">→</span>
+          </button>
+
           {/* Level card — separate below */}
           <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 mb-4">
             <div className="text-center mb-4">
