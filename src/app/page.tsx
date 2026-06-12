@@ -37,6 +37,8 @@ export default function HomePage() {
   const [showHighlightPicker, setShowHighlightPicker] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'gospel' | 'journey' | 'devotional'>('home')
+  // Whether the signed-in user is the admin — drives the "The Teacher" button.
+  const [isAdmin, setIsAdmin] = useState(false)
   const supabase = createClient()
   const router = useRouter()
   // Remembers the last verse shown so we don't repeat it on the next pick.
@@ -106,6 +108,14 @@ export default function HomePage() {
   }, [supabase])
 
   useEffect(() => { loadProfile() }, [loadProfile])
+  // Ask the server (once) whether this user is the admin, to decide if the
+  // "The Teacher" button should appear. The real gate is still server-side.
+  useEffect(() => {
+    fetch('/api/admin')
+      .then(r => r.json())
+      .then(d => setIsAdmin(!!d.isAdmin))
+      .catch(() => {})
+  }, [])
   // Load a personalized verse for the default mood on first render.
   // Later changes are driven by handleEmotionSelect so re-tapping rotates.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -584,6 +594,25 @@ export default function HomePage() {
             </div>
             <span className="text-stone-600 text-sm">→</span>
           </button>
+
+          {/* The Teacher — admin only; the button only renders for the admin */}
+          {isAdmin && (
+            <button
+              onClick={() => router.push('/teacher')}
+              className="w-full flex items-center justify-between bg-stone-900
+                   border border-stone-800 rounded-2xl px-5 py-4 mb-4
+                   hover:border-violet-500 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg">✍️</span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-stone-200">The Teacher</p>
+                  <p className="text-xs text-stone-500">Add verses to the database</p>
+                </div>
+              </div>
+              <span className="text-stone-600 text-sm">→</span>
+            </button>
+          )}
 
           {/* Level card — separate below */}
           <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 mb-4">

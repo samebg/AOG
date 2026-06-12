@@ -9,7 +9,7 @@
 // before saving. (Saving itself is wired up in Step 3 — for now Confirm just
 // tells you that.)
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 // One chat line shown in the transcript.
 interface Message {
@@ -33,6 +33,12 @@ export default function TeacherChat() {
   // True while a save is in flight; a status line to report the result.
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  // Voice input: are we recording, and are we waiting on transcription?
+  const [recording, setRecording] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  // Kept across renders: the active recorder and the audio chunks it produces.
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
 
   // Sends the typed message to the teacher chat API and folds the reply (and any
   // proposal) back into the UI.
@@ -89,6 +95,56 @@ export default function TeacherChat() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Sends a recorded audio clip to Whisper and drops the transcription into the
+  // input box (appending, so you can dictate in pieces). You then review + Send.
+  async function transcribe(blob: Blob) {
+    setTranscribing(true)
+    try {
+      const form = new FormData()
+      form.append('audio', blob, 'recording.webm')
+      const res = await fetch('/api/transcribe', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok && data.text) {
+        setInput(prev => (prev ? `${prev} ${data.text}` : data.text))
+      } else {
+        setStatus(data.error || 'Could not transcribe the audio.')
+      }
+    } catch {
+      setStatus('Something went wrong while transcribing.')
+    } finally {
+      setTranscribing(false)
+    }
+  }
+
+  // Starts microphone recording. When stopped, the chunks are bundled into one
+  // audio clip and sent off to transcribe().
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      chunksRef.current = []
+      recorder.ondataavailable = e => {
+        if (e.data.size > 0) chunksRef.current.push(e.data)
+      }
+      recorder.onstop = () => {
+        // Release the mic, then transcribe what we captured.
+        stream.getTracks().forEach(t => t.stop())
+        transcribe(new Blob(chunksRef.current, { type: 'audio/webm' }))
+      }
+      recorder.start()
+      recorderRef.current = recorder
+      setRecording(true)
+    } catch {
+      setStatus('Microphone access was blocked. Allow it to use voice input.')
+    }
+  }
+
+  // Stops the active recording, which triggers the recorder's onstop handler.
+  function stopRecording() {
+    recorderRef.current?.stop()
+    setRecording(false)
   }
 
   return (
@@ -166,6 +222,18 @@ export default function TeacherChat() {
           placeholder="Name a verse, e.g. 2 Timothy 4:18…"
           className="flex-1 rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm"
         />
+        <button
+          onClick={recording ? stopRecording : startRecording}
+          disabled={transcribing}
+          title={recording ? 'Stop recording' : 'Record voice'}
+          className={`rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50 ${
+            recording
+              ? 'bg-red-600 hover:bg-red-500 animate-pulse'
+              : 'border border-stone-700 hover:border-stone-500'
+          }`}
+        >
+          {transcribing ? '…' : recording ? '■' : '🎤'}
+        </button>
         <button
           onClick={send}
           disabled={loading}
