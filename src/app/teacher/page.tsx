@@ -10,6 +10,7 @@
 // For Step 1 it only proves the gate works: non-admins are turned away, the
 // admin sees a placeholder. The chat UI gets added in Step 2.
 
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isAdmin } from '@/lib/admin'
@@ -41,7 +42,12 @@ export default async function TeacherPage() {
   // The admin — placeholder for now; the chat UI arrives in Step 2.
   return (
     <div className="min-h-screen max-w-2xl mx-auto px-4 py-8 text-white">
-      <h1 className="text-xl font-semibold">The Teacher</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">The Teacher</h1>
+        <Link href="/" className="text-sm text-stone-400 hover:text-stone-200">
+          ← Back
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-stone-400">
         Admin verse authoring. Chat to add new verses to the database.
       </p>
