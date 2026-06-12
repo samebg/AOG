@@ -9,6 +9,7 @@ import {
   checkGrounding,
   type RetrievedVerse,
 } from '@/lib/rag'
+import { stripMarkdown } from '@/lib/text'
 
 const anthropic = new Anthropic()
 const openai = new OpenAI()
@@ -68,12 +69,7 @@ export async function POST(request: NextRequest) {
     const raw = response.content[0].type === 'text' ? response.content[0].text : ''
 
     // 4. Strip markdown for clean display.
-    const text = raw
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/\*(.*?)\*/g, '$1')
-      .replace(/#{1,6}\s/g, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
+    const text = stripMarkdown(raw)
 
     // 5. Grounding check — did the reply cite verses that exist in our DB?
     //    Wrapped so a failure here never breaks the chat response.
