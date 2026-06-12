@@ -19,6 +19,8 @@ import { parseReference } from '@/lib/books'
 
 const openai = new OpenAI()
 
+// POST /api/teacher/verse — validates the confirmed proposal, refuses
+// duplicates, embeds the text, and inserts the new verse into the database.
 export async function POST(request: NextRequest) {
   try {
     // 1. Gate: only the admin may add verses.

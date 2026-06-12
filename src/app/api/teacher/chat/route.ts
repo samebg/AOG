@@ -77,6 +77,9 @@ const PROPOSE_VERSE_TOOL: Anthropic.Tool = {
 const TOOLS = [LOOKUP_VERSE_TOOL, PROPOSE_VERSE_TOOL]
 const MAX_ROUNDS = 5 // safety cap so the tool loop can never run forever
 
+// POST /api/teacher/chat — runs the admin's conversation through Claude with
+// the two tools, answering tool calls until Claude produces a plain reply.
+// Returns { reply, proposal } — proposal is null until one is ready.
 export async function POST(request: NextRequest) {
   try {
     // 1. Gate: only the admin may use The Teacher.

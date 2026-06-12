@@ -13,6 +13,8 @@ import { isAdmin } from '@/lib/admin'
 
 const openai = new OpenAI()
 
+// POST /api/transcribe — accepts an audio file (form data), checks the caller
+// is the admin, and returns Whisper's transcription as { text }.
 export async function POST(request: NextRequest) {
   try {
     // 1. Gate: only the admin may transcribe.

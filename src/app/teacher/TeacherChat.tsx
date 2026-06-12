@@ -6,8 +6,8 @@
 // verse they want to add; the AI (via /api/teacher/chat) either asks a follow-up
 // question or returns a structured "proposal" (reference, text, category). When a
 // proposal arrives we show an EDITABLE confirm card so the admin can fix anything
-// before saving. (Saving itself is wired up in Step 3 — for now Confirm just
-// tells you that.)
+// before saving; Confirm sends it to /api/teacher/verse, which embeds and stores
+// it. The mic button records audio and fills the input via Whisper transcription.
 
 import { useState, useRef } from 'react'
 

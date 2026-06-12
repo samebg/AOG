@@ -1,10 +1,20 @@
 'use client'
+// src/app/gospel/page.tsx
+//
+// What this file does, plain English:
+// The full Bible reader. It walks the user down three levels — pick a book,
+// pick a chapter, read the verses — and lets them tap any verse to highlight
+// it in a color (+15 XP). It also supports DEEP LINKS: when chat sends the
+// user here with ?book=&chapter=&verse= in the URL, the page jumps straight
+// to that chapter, scrolls to the verse, and flashes a ring around it.
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getUnlockedColors } from '@/lib/xp'
 import { BOOKS } from '@/lib/books'
 
+// One verse as returned by our /api/bible/chapter route.
 interface Verse {
   id: string
   reference: string
@@ -28,6 +38,7 @@ export default function GospelPage() {
   const supabase = createClient()
 
   useEffect(() => {
+    // Loads the user's level so the color picker only offers unlocked colors.
     async function loadLevel() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -72,9 +83,13 @@ export default function GospelPage() {
     return () => clearTimeout(timer)
   }, [verses, targetVerse])
 
+  // A small in-memory store of chapters we've already fetched, so re-visiting
+  // one doesn't call API.Bible again. (Note: declared inside the component, so
+  // it currently resets on every re-render — see "known issues".)
   const chapterCache: Record<string, { id: string; reference: string; content: string }[]> = {}
 
-  // THEN replace loadChapter with this inside the component where it already lives:
+  // Fetches a chapter's verses from our /api/bible/chapter route and puts them
+  // on screen, with loading and error states the UI can show.
   async function loadChapter(bookId: string, chapter: number) {
     const key = `${bookId}.${chapter}`
 
@@ -104,6 +119,8 @@ export default function GospelPage() {
     }
   }
 
+  // Saves the tapped verse as a highlight in the chosen color, asks the server
+  // for the 15 XP reward, marks it highlighted on screen, and shows the toast.
   async function handleSaveHighlight(color: string) {
     if (!selectedVerse) return
     const { data: { user } } = await supabase.auth.getUser()
@@ -130,17 +147,20 @@ export default function GospelPage() {
     setTimeout(() => setSaveSuccess(false), 2000)
   }
 
+  // User picked a book — clear any old chapter/verses and show its chapter grid.
   function handleBookSelect(book: typeof BOOKS[0]) {
     setSelectedBook(book)
     setSelectedChapter(null)
     setVerses([])
   }
 
+  // User picked a chapter number — load its verses.
   function handleChapterSelect(chapter: number) {
     setSelectedChapter(chapter)
     if (selectedBook) loadChapter(selectedBook.id, chapter)
   }
 
+  // Moves to the next chapter (if there is one) and scrolls back to the top.
   function handleNextChapter() {
     if (!selectedBook || !selectedChapter) return
     if (selectedChapter < selectedBook.chapters) {
@@ -151,6 +171,7 @@ export default function GospelPage() {
     }
   }
 
+  // Moves to the previous chapter (if there is one) and scrolls back to the top.
   function handlePrevChapter() {
     if (!selectedBook || !selectedChapter) return
     if (selectedChapter > 1) {
@@ -161,6 +182,8 @@ export default function GospelPage() {
     }
   }
 
+  // Flips a verse's on-screen highlighted state (the saved row in the DB is
+  // separate — this just controls the visual styling in this session).
   function toggleHighlight(verseId: string) {
     setHighlightedVerses(prev => {
       const next = new Set(prev)
@@ -170,6 +193,8 @@ export default function GospelPage() {
     })
   }
 
+  // The back button walks UP one level at a time: verses → chapter grid →
+  // book list → home. That matches how the user drilled down.
   function handleBack() {
     if (verses.length > 0) {
       setVerses([])

@@ -1,8 +1,15 @@
 'use client'
+// src/app/highlights/page.tsx
+//
+// What this file does, plain English:
+// Shows every verse the user has saved, newest first, each with its highlight
+// color as a bar on the left, the date it was saved, and a delete button.
+
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+// One saved highlight row from the highlights table.
 interface Highlight {
   id: string
   verse_reference: string
@@ -19,6 +26,7 @@ export default function HighlightsPage() {
   const router = useRouter()
 
   useEffect(() => {
+    // Loads this user's highlights from Supabase, newest first.
     async function loadHighlights() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
@@ -35,11 +43,14 @@ export default function HighlightsPage() {
     loadHighlights()
   }, [])
 
+  // Deletes a highlight from the database, then removes it from the list on
+  // screen so the page updates instantly without a re-fetch.
   async function deleteHighlight(id: string) {
     await supabase.from('highlights').delete().eq('id', id)
     setHighlights(prev => prev.filter(h => h.id !== id))
   }
 
+  // Turns a database timestamp into a short readable date like "Jun 12, 2026".
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',

@@ -1,4 +1,14 @@
 'use client'
+// src/app/page.tsx
+//
+// What this file does, plain English:
+// The main screen of the app. It is ONE component that shows five tabs
+// (home / chat / gospel / journey / devotional) — switching tabs just swaps
+// which block of JSX renders, it never navigates to a new page. The home tab
+// holds the emotion check-in and verse card; the chat tab holds the RAG chat
+// with grounding badges and tappable verse references; the journey tab shows
+// levels, colors, and links out to highlights and the eval dashboard.
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { EMOTIONS } from '@/lib/emotions'
@@ -9,6 +19,7 @@ import { parseReference } from '@/lib/books'
 import RetrievedContext from '@/components/RetrievedContext'
 import type { RetrievedVerse } from '@/lib/rag'
 
+// The slice of the profiles table this screen needs.
 interface Profile {
   total_xp: number
   current_level: number
@@ -16,6 +27,8 @@ interface Profile {
   display_name: string | null
 }
 
+// One chat message. Assistant messages also carry the RAG extras: whether the
+// reply was grounded, which cited verses matched our DB, and what was retrieved.
 interface Message {
   role: 'user' | 'assistant'
   content: string
@@ -44,6 +57,9 @@ export default function HomePage() {
   // Remembers the last verse shown so we don't repeat it on the next pick.
   const lastVerseRef = useRef<string | null>(null)
 
+  // Loads the user's profile, then pings /api/streak (which awards the daily
+  // 50 XP on the first open of the day) and re-loads the profile so the header
+  // shows the updated XP and streak right away.
   const loadProfile = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
@@ -121,6 +137,8 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadPersonalVerse(selectedEmotion) }, [])
 
+  // Runs when the user taps a mood: shows a verse for that feeling and saves
+  // today's check-in (which awards 10 XP, but only once per day).
   async function handleEmotionSelect(emotion: typeof EMOTIONS[0]) {
     setSelectedEmotion(emotion)
     loadPersonalVerse(emotion)
@@ -134,6 +152,10 @@ export default function HomePage() {
     })
   }
 
+  // Sends the chat to /api/chat and folds the reply into the transcript along
+  // with its RAG extras (grounded badge data + retrieved verses). Awards the
+  // 25 XP chat bonus only on the FIRST message of a session, and never for a
+  // crisis message.
   async function handleSendMessage() {
     if (!input.trim() || chatLoading) return
     const userMessage: Message = { role: 'user', content: input }
@@ -172,6 +194,8 @@ export default function HomePage() {
     setChatLoading(false)
   }
 
+  // Saves the current verse card to the user's highlights in their chosen
+  // color, asks the server for the 15 XP reward, and flashes a success note.
   async function handleHighlight() {
     if (!verse) return
     const { data: { user } } = await supabase.auth.getUser()
@@ -199,6 +223,7 @@ export default function HomePage() {
     setTimeout(() => setSaveSuccess(false), 2000)
   }
 
+  // Ends the Supabase session and returns to the login screen.
   async function handleSignOut() {
     await supabase.auth.signOut()
     router.push('/login')

@@ -4,11 +4,9 @@
 // This is the admin-only "The Teacher" page, where the admin will chat with the
 // AI to add new verses to the database. This file is a SERVER component: the
 // admin check runs on the server before any page HTML is sent, so a normal user
-// can't bypass it by fiddling with the browser. The real enforcement still lives
-// on the API routes (added in later steps) — this page is the front door.
-//
-// For Step 1 it only proves the gate works: non-admins are turned away, the
-// admin sees a placeholder. The chat UI gets added in Step 2.
+// can't bypass it by fiddling with the browser. The real enforcement also lives
+// on the /api/teacher/* routes — this page is just the front door. The chat
+// itself is the TeacherChat client component mounted below.
 
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -16,6 +14,8 @@ import { createClient } from '@/lib/supabase/server'
 import { isAdmin } from '@/lib/admin'
 import TeacherChat from './TeacherChat'
 
+// The server-rendered Teacher page: checks who's asking, turns away non-admins,
+// and renders the chat UI for the admin.
 export default async function TeacherPage() {
   // Who is asking? Read the real session on the server.
   const supabase = await createClient()
@@ -39,7 +39,7 @@ export default async function TeacherPage() {
     )
   }
 
-  // The admin — placeholder for now; the chat UI arrives in Step 2.
+  // The admin — show the verse-authoring chat.
   return (
     <div className="min-h-screen max-w-2xl mx-auto px-4 py-8 text-white">
       <div className="flex items-center justify-between">

@@ -1,4 +1,12 @@
 'use client'
+// src/app/login/page.tsx
+//
+// What this file does, plain English:
+// The public landing page: a feature overview on the left so visitors know
+// what the app is, and the sign-in / sign-up card on the right. One form
+// handles both modes via the isSignUp toggle. On success, Supabase sets the
+// session cookie and we send the user to the home screen.
+
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -22,6 +30,9 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Submits the form: signs the user up or in (depending on the toggle),
+  // shows Supabase's error message if it fails, and goes home if it works.
+  // router.refresh() makes the server re-read the new session cookie.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)

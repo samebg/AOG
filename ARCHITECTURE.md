@@ -16,6 +16,7 @@ gamified XP system, AI devotionals, and an AI chat companion whose answers are
 | Auth         | Supabase Auth (`@supabase/ssr`, cookie-based)               |
 | Chat / text  | Anthropic Claude (`claude-sonnet-4-6`)                       |
 | Embeddings   | OpenAI `text-embedding-3-small` (1536 dims)                 |
+| Speech-to-text | OpenAI Whisper (`whisper-1`) — The Teacher's voice input   |
 | Bible text   | API.Bible (NKJV)                                             |
 
 ---
@@ -101,6 +102,36 @@ Two front ends consume it:
   user presses "Run evaluation" and sees summary stat cards plus a per-query table
   (off-topic rows flagged). It runs on demand, not on load, because each run costs
   ~10 OpenAI + Claude calls; the route sets `maxDuration = 60` for headroom.
+
+---
+
+## The Teacher (admin verse authoring)
+
+`/teacher` is an admin-only conversational tool for growing the verse library
+without touching SQL. The admin names a reference ("2 Timothy 4:18"), and Claude
+runs with two **tools** in a bounded loop (`/api/teacher/chat`, max 5 rounds):
+
+- **`lookup_verse`** — the *server* fetches the exact NKJV text from API.Bible
+  (`src/lib/bible.ts`), so scripture is never typed or quoted from model memory.
+- **`propose_verse`** — once reference + confirmed text + category are gathered,
+  Claude hands back a structured proposal.
+
+The UI (`src/app/teacher/TeacherChat.tsx`) shows the proposal in an **editable
+confirm card**; only on the admin's explicit Confirm does `POST /api/teacher/verse`
+write anything: it validates the fields, derives the `passage_id` via
+`parseReference()`, refuses duplicates (409), embeds the text with OpenAI, and
+inserts the row — at which point the live RAG chat can retrieve it immediately.
+
+**Voice input:** a mic button records audio (`MediaRecorder`) and sends it to
+`POST /api/transcribe`, which runs OpenAI Whisper and returns text into the input
+box for review before sending.
+
+**Admin gating, three layers, one definition:** `isAdmin()` (`src/lib/admin.ts`)
+compares the signed-in email to the server-only `ADMIN_EMAIL` env var. The
+`/teacher` page checks it server-side before rendering; every `/api/teacher/*`
+route (and `/api/transcribe`) re-checks it (403); and the home screen asks
+`GET /api/admin` only to decide whether to *show* the Teacher button — UI
+convenience, not security.
 
 ---
 

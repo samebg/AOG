@@ -1,3 +1,14 @@
+// src/app/api/chat/route.ts
+//
+// What this file does, plain English:
+// This is the live chat endpoint — the RAG pipeline in production. Each
+// message goes through five steps: (1) crisis keyword check before any AI,
+// (2) retrieve the 3 closest real verses from our database by meaning,
+// (3) build a system prompt that includes those verses, (4) ask Claude to
+// respond building on them, (5) verify the verses the answer cites actually
+// exist in our verified table. The pipeline functions themselves live in
+// src/lib/rag.ts so the eval can measure this exact same code.
+
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
@@ -14,6 +25,9 @@ import { stripMarkdown } from '@/lib/text'
 const anthropic = new Anthropic()
 const openai = new OpenAI()
 
+// The fixed response for crisis messages. Hardcoded on purpose — when someone
+// may be in danger, the only right answer is real human help lines, not an
+// AI-generated reply.
 const CRISIS_RESPONSE = `I hear that you're going through something really heavy right now. You don't have to carry this alone.
 
 Please reach out to someone who can help:
@@ -22,6 +36,9 @@ Please reach out to someone who can help:
 
 You matter. God has not forgotten you.`
 
+// POST /api/chat — takes the conversation so far, runs the 5-step pipeline
+// described above, and returns the reply plus everything the UI needs to show
+// its work: crisis flag, grounded flag, matched verses, and retrieved verses.
 export async function POST(request: NextRequest) {
   try {
     const { messages } = await request.json()

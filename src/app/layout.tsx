@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: 'Your daily scripture companion',
 }
 
+// The root layout wraps every page: it sets the Geist font and dark theme on
+// <body> and mounts the ambient Three.js background once, behind everything.
 export default function RootLayout({
   children,
 }: {

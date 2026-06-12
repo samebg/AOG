@@ -1,5 +1,16 @@
+// src/app/api/bible/chapter/route.ts
+//
+// What this file does, plain English:
+// Fetches a whole Bible chapter for the Gospel reader. API.Bible returns the
+// chapter as one blob of HTML-ish text with verse numbers in [brackets], so
+// this route also does the cleanup: strip the HTML tags, then split the text
+// into one object per verse so the reader can render (and highlight) each
+// verse on its own line. The API key stays server-side.
+
 import { NextRequest, NextResponse } from 'next/server'
 
+// GET /api/bible/chapter?bookId=PHP&chapter=4 — fetches the chapter, cleans
+// it, and returns { verses: [{ id, reference, content }, ...] }.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const bookId = searchParams.get('bookId')
