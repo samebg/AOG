@@ -95,7 +95,7 @@ Based on these highlights, write a personalized daily devotional. Return ONLY va
 {
   "theme": "2-4 word theme title (e.g. Finding Rest, Trusting God's Plan)",
   "reflection": "A warm, personal 3-4 sentence reflection based on the pattern you see in their verses. Speak directly to them using 'you'. Keep it under 80 words.",
-  "prayer": "A short closing prayer (2-3 sentences) that captures the heart of what they've been seeking. Under 40 words.",
+  "prayer": "A short closing prayer (2-3 sentences) that captures the heart of what they've been seeking. Under 40 words. Always close the prayer in Jesus' name — end with a phrase like 'In Jesus' name, Amen.' or 'In the name of our Lord and Savior Jesus Christ, Amen.'",
   "verse_focus": "The single verse reference that best captures today's theme (e.g. Philippians 4:6)"
 }`
                 }
@@ -115,7 +115,7 @@ Based on these highlights, write a personalized daily devotional. Return ONLY va
                 devotional: {
                     theme: 'Daily Reflection',
                     reflection: 'God is speaking through the verses you have been drawn to. Return tomorrow for a fresh word.',
-                    prayer: 'Lord, open my eyes to what you are showing me. Amen.',
+                    prayer: 'Lord, open my eyes to what you are showing me. In Jesus\' name, Amen.',
                     verse_focus: null,
                     generated: false
                 }
