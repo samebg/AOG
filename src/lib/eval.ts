@@ -88,17 +88,26 @@ export function summarize(results: EvalResult[]): EvalSummary {
 
 // Runs the whole shared query set and returns the full structured run. The
 // optional onResult callback lets the terminal script print progress live.
+//
+// We fire all the queries AT ONCE (Promise.all) instead of one-after-another.
+// Each query makes slow AI calls, so running them sequentially could take 90+
+// seconds — long enough for Vercel to kill the request at its 60s limit. Run in
+// parallel and the whole thing finishes in about the time of the slowest single
+// query. Promise.all keeps `results` in the original query order regardless of
+// which call happens to finish first.
 export async function runEval(
   supabase: SupabaseClient,
   openai: OpenAI,
   anthropic: Anthropic,
   onResult?: (r: EvalResult, index: number) => void
 ): Promise<EvalRun> {
-  const results: EvalResult[] = []
-  for (let i = 0; i < EVAL_QUERIES.length; i++) {
-    const r = await evaluateQuery(supabase, openai, anthropic, EVAL_QUERIES[i])
-    results.push(r)
-    onResult?.(r, i)
-  }
+  const results = await Promise.all(
+    EVAL_QUERIES.map((q, i) =>
+      evaluateQuery(supabase, openai, anthropic, q).then(r => {
+        onResult?.(r, i)
+        return r
+      })
+    )
+  )
   return { results, summary: summarize(results), ranAt: new Date().toISOString() }
 }

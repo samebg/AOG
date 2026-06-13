@@ -34,7 +34,19 @@ export default function EvalPage() {
     setError(null)
     try {
       const res = await fetch('/api/eval')
-      const data = await res.json()
+      // Read the body as text first. If the function timed out, Vercel sends a
+      // plain-text error page (not JSON), and parsing it directly would throw a
+      // confusing "Unexpected token" error. Try to parse, fall back to a clear
+      // message.
+      const body = await res.text()
+      let data: EvalRun & { error?: string }
+      try {
+        data = JSON.parse(body)
+      } catch {
+        throw new Error(
+          res.ok ? 'Got an unexpected response.' : 'The run took too long and timed out.'
+        )
+      }
       if (!res.ok) throw new Error(data.error || 'Eval failed')
       setRun(data as EvalRun)
     } catch (e) {
