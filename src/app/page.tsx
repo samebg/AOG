@@ -49,6 +49,8 @@ export default function HomePage() {
   const [highlightColor, setHighlightColor] = useState('#FBBF24')
   const [showHighlightPicker, setShowHighlightPicker] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  // A short "Saved ..." confirmation shown when Claude saves a verse from chat.
+  const [chatSaveNotice, setChatSaveNotice] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'gospel' | 'journey' | 'devotional'>('home')
   // Whether the signed-in user is the admin — drives the "The Teacher" button.
   const [isAdmin, setIsAdmin] = useState(false)
@@ -181,6 +183,14 @@ export default function HomePage() {
       retrieved: data.retrieved,
     }])
 
+    // If Claude saved a verse this turn, flash a confirmation and refresh the
+    // header XP (the save awarded XP on the server).
+    if (data.saved && data.saved.length > 0) {
+      setChatSaveNotice(`Saved ${data.saved.join(', ')} ✓`)
+      setTimeout(() => setChatSaveNotice(null), 3000)
+      loadProfile()
+    }
+
     if (!data.crisis && newMessages.length === 1) {
       await fetch('/api/xp', {
         method: 'POST',
@@ -235,6 +245,14 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen text-white max-w-lg mx-auto">
+
+      {/* Floating confirmation when Claude saves a verse from the chat */}
+      {chatSaveNotice && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-full
+                        bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-lg">
+          {chatSaveNotice}
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-12 pb-4">
