@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getUnlockedColors } from '@/lib/xp'
-import { BOOKS } from '@/lib/books'
+import { BOOKS, formatReference } from '@/lib/books'
 
 // One verse as returned by our /api/bible/chapter route.
 interface Verse {
@@ -129,7 +129,7 @@ export default function GospelPage() {
     await supabase.from('highlights').insert({
       user_id: user.id,
       verse_id: selectedVerse.id,
-      verse_reference: selectedVerse.reference,
+      verse_reference: formatReference(selectedVerse.reference),
       verse_text: selectedVerse.content,
       color,
     })

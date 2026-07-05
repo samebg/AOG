@@ -15,7 +15,7 @@ import { EMOTIONS } from '@/lib/emotions'
 import { getLevelFromXP, getUnlockedColors, XP_REWARDS } from '@/lib/xp'
 import { useRouter } from 'next/navigation'
 import { CACHED_VERSES } from '@/lib/verse'
-import { parseReference } from '@/lib/books'
+import { parseReference, formatReference } from '@/lib/books'
 import RetrievedContext from '@/components/RetrievedContext'
 import type { RetrievedVerse } from '@/lib/rag'
 
@@ -204,7 +204,7 @@ export default function HomePage() {
     await supabase.from('highlights').insert({
       user_id: user.id,
       verse_id: verse.verseId,
-      verse_reference: verse.reference,
+      verse_reference: formatReference(verse.reference),
       verse_text: verse.text,
       color: highlightColor,
     })

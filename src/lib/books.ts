@@ -130,3 +130,35 @@ export function parseReference(ref: string): VerseLocation | null {
     verse: parseInt(match[3], 10),
   }
 }
+
+// Finds a book by its short API.Bible id (e.g. "1JN", "MRK"), case-insensitively.
+// Returns null if no book uses that id.
+function findBookById(id: string): BibleBook | null {
+  const wanted = id.toLowerCase()
+  return BOOKS.find(b => b.id.toLowerCase() === wanted) ?? null
+}
+
+// Turns ANY reference — short code like "1JN 3:18" OR full name like "Mark 8:16"
+// — into one consistent full-name form like "1 John 3:18". This exists because
+// verses get saved from several screens that each write the reference a bit
+// differently; running them all through this one function keeps the Highlights
+// list looking uniform. If we can't confidently identify the book, we return the
+// original string unchanged so a save is never lost or mangled.
+export function formatReference(ref: string): string {
+  const trimmed = ref.trim()
+
+  // Split into the book part and the trailing "chapter:verse" (keeping ranges
+  // like "3:4-7"). The lazy book group expands only as far as needed so multi-
+  // word books like "Song of Songs" and "1 John" stay intact.
+  const match = trimmed.match(/^(.+?)\s+(\d+:\d+(?:\s*-\s*\d+)?)\s*$/)
+  if (!match) return trimmed
+
+  const bookPart = match[1]
+  const numbers = match[2]
+
+  // Try the short code first, then fall back to the full-name lookup.
+  const book = findBookById(bookPart) ?? findBookByName(bookPart)
+  if (!book) return trimmed
+
+  return `${book.name} ${numbers}`
+}
