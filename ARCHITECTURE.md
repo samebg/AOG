@@ -135,6 +135,33 @@ convenience, not security.
 
 ---
 
+## Highlight audit (the "night-shift librarian")
+
+Highlights are saved from several screens, so older rows drifted in format (short
+codes like `1JN 3:18` vs full names like `1 John 3:18`). `formatReference()`
+(`src/lib/books.ts`) normalizes every **new** save; this admin tool cleans up the
+**old** rows.
+
+The logic lives in **`src/lib/audit.ts`**, run five checks per row: `format`
+(fixable), `unrecognized`, `empty`, `text-mismatch` (saved text vs the verified
+`verses` table), and `duplicate`. It is **deterministic on purpose** — verse text
+is verified against our own data, never an LLM, since asking a model to recall
+scripture would reintroduce the hallucination grounding is meant to prevent.
+
+**Safety posture:** the scan (`auditHighlights`) writes nothing. Fixing is split
+into three separate, opt-in actions so each write is deliberate:
+`applyFormatFixes()` rewrites only old-format references; `applyTextFixes()`
+overwrites mismatched text with the **verified** text from the `verses` table
+(safe precisely because the source is our data, not a model); and
+`removeDuplicates()` deletes the later copies, keeping the earliest save.
+`GET /api/audit` scans; `POST /api/audit` takes an `action`
+(`format` / `text` / `duplicates`); both are admin-gated (they read across all
+users). The `/audit` dashboard (`src/app/audit/page.tsx`) shows counts + a
+findings table, and each fix button appears only when that issue exists — each
+with its own confirmation before it writes.
+
+---
+
 ## Data model (Supabase)
 
 | Table           | Purpose                                                              |
@@ -180,9 +207,12 @@ src/
     highlights/page.tsx   # saved verses
     devotional/page.tsx   # daily AI devotional
     eval/page.tsx         # RAG eval dashboard (cards + per-query table)
+    audit/page.tsx        # highlight audit: server-side admin gate → AuditDashboard
+    audit/AuditDashboard.tsx # audit dashboard UI (scan + confirmed fix actions)
     api/
-      chat/route.ts       # RAG chat (uses lib/rag.ts); returns retrieved + grounding
+      chat/route.ts       # RAG chat (uses lib/rag.ts); save_verse tool loop
       eval/route.ts       # runs the shared eval on demand (auth-gated)
+      audit/route.ts      # highlight audit: GET scans, POST fixes (admin-gated)
       devotional/route.ts # cached daily devotional via Claude
       mood/route.ts       # daily mood check-in
       xp/ streak/         # gamification (award_xp via service client)
@@ -195,7 +225,8 @@ src/
     rag.ts                # retrieval + grounding pipeline (shared)
     eval.ts               # runEval/evaluateQuery/summarize (shared, built on rag.ts)
     eval-queries.ts       # the single test-query set (tagged offTopic)
-    books.ts              # 66-book data + parseReference() for deep-linking
+    audit.ts              # highlight-audit checks + formatting-only fixer (shared)
+    books.ts              # 66-book data + parseReference()/formatReference()
     xp.ts                 # levels, colors, XP rewards, crisis keywords
     emotions.ts           # 8 emotions → verse categories (many-to-many)
     verse.ts              # local cache of the 8 home-screen verses

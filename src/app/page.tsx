@@ -657,6 +657,25 @@ export default function HomePage() {
             </button>
           )}
 
+          {/* Highlight audit — admin only; scans saved highlights for problems */}
+          {isAdmin && (
+            <button
+              onClick={() => router.push('/audit')}
+              className="w-full flex items-center justify-between bg-stone-900
+                   border border-stone-800 rounded-2xl px-5 py-4 mb-4
+                   hover:border-violet-500 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg">🗂️</span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-stone-200">Highlight audit</p>
+                  <p className="text-xs text-stone-500">Check saved verses for inconsistencies</p>
+                </div>
+              </div>
+              <span className="text-stone-600 text-sm">→</span>
+            </button>
+          )}
+
           {/* Level card — separate below */}
           <div className="bg-stone-900 border border-stone-800 rounded-2xl p-5 mb-4">
             <div className="text-center mb-4">
